@@ -1,16 +1,24 @@
 with (p5) {
     let DEBUG = false;
-    let SIZE = 800;
 
-    let HEX_RADIUS = 3;
+    let SIZE = 900;
+    let HEX_RADIUS = 4;
     let HEX_WIDTH = Math.sqrt(3) * HEX_RADIUS;
     let HEX_HEIGHT = 2 * HEX_RADIUS;
-    let HEX_ROW_HEIGHT = 3 * HEX_HEIGHT / 4;
 
+    let HEX_ROW_HEIGHT = 3 * HEX_HEIGHT / 4;
     let HEX_NUM_X;
     let HEX_NUM_Y;
 
-    let POINTS = [];
+    let MAX_DEPTH = 60;
+
+    let POINTS = new Set();
+
+    let SEED;
+
+    let currentSeed;
+
+    let seedTextField = "";
 
     function setup() {
         createCanvas(SIZE - SIZE % HEX_WIDTH, SIZE - SIZE % HEX_ROW_HEIGHT);
@@ -18,60 +26,53 @@ with (p5) {
         HEX_NUM_X = width / HEX_WIDTH + 1;
         HEX_NUM_Y = height / HEX_ROW_HEIGHT + 1;
 
-        frameRate(1);
+        SEED = random(0, 10000);
+        currentSeed = Math.floor(random(0, 99999999));
 
-
-        f(
-            new Point3D(0, 0, 0),
-            30,
-            0,
-            POINTS,
-            random(0, 10000),
-            new Point3D(-1, 1, 0)
-        );
+        frameRate(0);
+        draw();
     }
 
-    function f(previous, i, branchDepth, list, seed, direction) {
-        if (i === 0) {
-            return;
+    function mouseClicked() {
+        return;
+
+        if (mouseButton === LEFT) {
+            currentSeed += 1;
+        } else if (mouseButton === RIGHT) {
+            currentSeed -= 1;
         }
 
-        let current = previous.clone();
-        current.translatePoint(direction);
+        draw();
+    }
 
-        //list.push(current);
-
-        let c = current;
-
-        list.push(new Point3D(c.x, c.y, c.z));
-        list.push(new Point3D(c.y, c.x, c.z));
-        list.push(new Point3D(c.z, c.y, c.x));
-        list.push(new Point3D(c.x, c.z, c.y));
-        list.push(new Point3D(c.z, c.x, c.y));
-        list.push(new Point3D(c.y, c.z, c.x));
-
-        randomSeed(seed);
-        let nextSeed = random(0, 1000000);
-        let r = Math.floor(random(0, 100));
-
-        let branch = r < (1 / ((branchDepth + 1) / 10));
-        let straight = r < 95;
-
-        if (branch) {
-            f(current, i - 1, branchDepth + 1, list, nextSeed, direction.left());
-            f(current, i - 1, branchDepth + 1, list, nextSeed, direction.right());
+    function keyPressed() {
+        if (key === 'a' || keyCode === LEFT_ARROW || keyCode === DOWN_ARROW) {
+            currentSeed -= 1;
+            draw();
+        } else if (key === 'd' || keyCode === RIGHT_ARROW || keyCode === UP_ARROW) {
+            currentSeed += 1;
+            draw();
+        } else if (key >= '0' && key <= '9') {
+            console.log(key);
+            seedTextField = seedTextField + str(key);
+            drawText();
+        } else if (keyCode === 13) {
+            currentSeed = parseInt(seedTextField);
+            seedTextField = "";
+            draw();
         }
+    }
 
-        if (straight) {
-            f(current, i - 1, branchDepth, list, nextSeed, direction);
-        }
+    function generate() {
+        POINTS = generatePattern(new Point3D(0, 0, 0), MAX_DEPTH, currentSeed);
     }
 
     function draw() {
-        background(50);
-        fill(255);
-        noStroke();
+        generate();
 
+        background(50);
+        fill(10);
+        noStroke();
 
         for (let y = 0; y < HEX_NUM_Y; y++) {
             let yPrime = (3 * HEX_HEIGHT / 4) * y;
@@ -87,20 +88,18 @@ with (p5) {
 
                 let point3D = point2D.oddrToCube();
 
-                let doColor = contains(POINTS, point3D);
+                let drawHex = POINTS.has(point3D.toString());
 
                 //let doColor = point3D.x === 0 || point3D.z === 0 || point3D.y === 0;
 
-                if (doColor) {
-                    c = color(random(0, 255), random(0, 255), random(0, 255));
-                } else {
-                    c = color(20);
+                if (drawHex) {
+                    //c = color(random(0, 255), random(0, 255), random(0, 255));
+                    fill(c);
+                    stroke(c);
+                    //noStroke();
+
+                    drawHexagon(xPrime, yPrime, HEX_RADIUS);
                 }
-
-                fill(c);
-                stroke(c);
-
-                drawHexagon(xPrime, yPrime, HEX_RADIUS);
 
                 if (DEBUG) {
                     fill(255);
@@ -109,16 +108,75 @@ with (p5) {
                 }
             }
         }
+
+        drawText();
     }
 
-    function contains(list, point3d) {
-        for (let i = 0; i < list.length; i++) {
-            if (list[i].equals(point3d)) {
-                return true;
-            }
+    function drawText() {
+        noStroke();
+        fill(50);
+        rect(0, 0, 100, 100);
+
+        fill(255);
+
+        text(currentSeed, 10, 10);
+        text(seedTextField, 10, 30);
+    }
+
+    function generatePattern(start, maxDepth, seed) {
+        let result = new Set();
+
+        _generatePattern(start, maxDepth, 0, result, seed, new Point3D(-1, 1, 0));
+        result.add(new Point3D(0, 0, 0).toString());
+
+        return result;
+    }
+
+    function _generatePattern(previous, i, branchDepth, result, seed, direction) {
+        if (i === 0) {
+            return;
         }
 
-        return false;
+        let current = previous.clone();
+        current.translatePoint(direction);
+
+        //result.push(current);
+
+        let c = current;
+
+        result.add(new Point3D(c.x, c.y, c.z).toString());
+        result.add(new Point3D(c.y, c.x, c.z).toString());
+        result.add(new Point3D(c.z, c.y, c.x).toString());
+        result.add(new Point3D(c.x, c.z, c.y).toString());
+        result.add(new Point3D(c.z, c.x, c.y).toString());
+        result.add(new Point3D(c.y, c.z, c.x).toString());
+
+        if (current.x === 0 || current.y === 0) {
+            return;
+        }
+
+        randomSeed(seed);
+        let nextSeed = random(0, 1000000);
+        let pBranch = Math.floor(random(0, 100));
+        let pStraight = Math.floor(random(0, 100));
+
+        let branch = pBranch < (1 / ((branchDepth + 1) / 10));
+        let branchAll = pBranch < (1 / ((branchDepth + 1) / 5));
+        let straight = pStraight < 95 + i / 2;
+
+        if (branch) {
+            _generatePattern(current, i - 1, branchDepth + 1, result, nextSeed, direction.left());
+            _generatePattern(current, i - 1, branchDepth + 1, result, nextSeed, direction.right());
+        }
+
+        if (branchAll) {
+            _generatePattern(current, i - 1, branchDepth + 1, result, nextSeed, direction.left().left());
+            _generatePattern(current, i - 1, branchDepth + 1, result, nextSeed, direction.right().right());
+        }
+
+        if (straight) {
+            _generatePattern(current, i - 1, branchDepth, result, nextSeed, direction);
+        }
     }
 
 
@@ -235,7 +293,6 @@ with (p5) {
                 this.x = temp;
             } else if (this.y === 0) {
                 let temp = this.x;
-                // noinspection JSSuspiciousNameCombination
                 this.x = this.y;
                 this.y = temp;
             } else if (this.z === 0) {
@@ -247,6 +304,10 @@ with (p5) {
 
         clone() {
             return new Point3D(this.x, this.y, this.z);
+        }
+
+        toString() {
+            return str(this.x) + ", " + str(this.y) + ", " + str(this.z);
         }
     }
 }
