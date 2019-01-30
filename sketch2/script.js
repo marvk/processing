@@ -1,54 +1,69 @@
-with (p5) {
-    let DEBUG = false;
+//VELOCITY += random(-0.5, 0.5);
 
-    let SIZE = 900;
+with (p5) {
+
+    let DEBUG = false;
 
     let PARTICLES = [];
 
-    let CENTER;
+    let PARTICLES_PER_SECOND = 25;
+    let PARTICLE_DIAMETER = 5;
 
+    let CENTER;
     let POS;
     let VELOCITY;
-    let ANGLE;
 
+    let ANGLE;
     let T = 0;
 
     function setup() {
-        createCanvas(SIZE, SIZE);
-
+        createCanvas(windowWidth, windowHeight);
         CENTER = new Point2D(Math.round(width / 2), Math.round(height / 2));
         POS = CENTER.clone();
+
         VELOCITY = 10;
         ANGLE = random(0, TWO_PI);
-
         frameRate(60);
+
         draw();
     }
 
+    function windowResized() {
+        resizeCanvas(windowWidth, windowHeight);
+    }
+
     function draw() {
+        T += 0.01;
 
         background(255);
         noStroke();
 
         POS.translatePolar(ANGLE, VELOCITY);
-        POS.wrapWalls();
 
-        VELOCITY += random(-0.5, 0.5);
-        VELOCITY = Math.min(Math.max(VELOCITY, -10), 10);
-        ANGLE += random(-0.1, 0.1);
+        POS.wrapWalls();
+        //VELOCITY = Math.min(Math.max(VELOCITY, -10), 10);
+
+        //ANGLE += random(-0.1, 0.1);
+        VELOCITY = (noise(T)) * 50;
+        //VELOCITY = Math.min(Math.max(VELOCITY, -10), 10);
+        ANGLE += (noise(T + 100000) - 0.5) * 0.2;
 
         fill(0);
         ellipse(POS.x, POS.y, 3, 3);
-
-        for (let i = 0; i < 20; i++) {
+        for (let i = 0; i < PARTICLES_PER_SECOND; i++) {
             PARTICLES.push(createRandomParticle(POS));
         }
-
-
         PARTICLES.forEach(p => {
+            //if (p.timeout < 75 && Math.abs(p.location.x - POS.x) < 50 && Math.abs(p.location.y - POS.y) < 50) {
+            //    console.log("haslloasd");
+            //    p.timeout = -1;
+            //} else {
+            //
+            //}
+
             fill(p.color);
             p.iterate();
-            rect(p.location.x, p.location.y, 2, 2);
+            rect(p.location.x, p.location.y, PARTICLE_DIAMETER, PARTICLE_DIAMETER);
             //ellipse(p.location.x, p.location.y, 10, 10);
         });
 
