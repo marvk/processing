@@ -1,9 +1,11 @@
 with (p5) {
-    let CENTER;
+    let centerX;
+    let centerY;
 
     function setup() {
         createCanvas(windowWidth, windowHeight);
-        CENTER = new Point2D(Math.round(width / 2), Math.round(height / 2));
+        centerX = Math.round(width / 2);
+        centerY = Math.round(height / 2);
 
         frameRate(60);
     }
